@@ -15,17 +15,25 @@ class TCP_Server():
 
     def tcp_server(self):
          while self.run_event.is_set():
-            try:
-		self.s.settimeout(5)
-	    	conn, addr = self.s.accept()
-            	data = conn.recv(BUFFER_SIZE)
-            	if not data: break
-                if data == "on": self.control.on()
-                if data == "off": self.control.off()
-            	conn.send(data)
-            	conn.close()
-	    except:
-		    pass
+             try:
+                 self.s.settimeout(5)
+                 conn, addr = self.s.accept()
+                 data = conn.recv(BUFFER_SIZE)
+                 if not data: break
+                 else:
+                    json_data = json.loads(data)
+                    if json_data['command'] == 0x00: self.control.stop()
+                    elif json_data['command'] == 0x01: self.control.forward()
+                    elif json_data['command'] == 0x02: self.control.back()
+                    elif json_data['command'] == 0x03: self.control.left()
+                    elif json_data['command'] == 0x04: self.control.right()
+                    elif json_data['command'] == 0x05: self.control.motor_veliocity(json_data['value'])
+                    elif json_data['command'] == 0x06: self.control.motor_calibration(json_data['value'][0], json_data['value'][1])
+                    #elif json_data['command'] == 0x0a: 
+                 conn.send(data)
+                 conn.close()
+            except:
+                pass
 
     def start(self):
         self.run_event = threading.Event()
@@ -70,9 +78,11 @@ class Control():
     def motor_calibration(self, left_motor, right_motor):
         self.left_motor = ((left_motor / 100) * (self.veliocity / 100) * 100)
         self.right_motor = ((right_motor / 100) * (self.veliocity / 100) * 100)
+        self.set_motor_parameters(self)
 
     def motor_veliocity(self, veliocity):
         self.veliocity = veliocity
+        self.set_motor_parameters(self)
 
     def forward(self):
         GPIO.output(self.gpio_forward_left, GPIO.HIGH)
@@ -96,6 +106,12 @@ class Control():
         GPIO.output(self.gpio_forward_left, GPIO.LOW)
         GPIO.output(self.gpio_forward_right, GPIO.HIGH)
         GPIO.output(self.gpio_back_left, GPIO.HIGH)
+        GPIO.output(self.gpio_back_right, GPIO.LOW)
+
+    def stop(self):
+        GPIO.output(self.gpio_forward_left, GPIO.LOW)
+        GPIO.output(self.gpio_forward_right, GPIO.LOW)
+        GPIO.output(self.gpio_back_left, GPIO.LOW)
         GPIO.output(self.gpio_back_right, GPIO.LOW)
     
     def set_motor_parameters(self):
