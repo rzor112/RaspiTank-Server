@@ -5,8 +5,6 @@ TCP_IP = '192.168.0.106'
 TCP_PORT = 5005
 BUFFER_SIZE = 20
 
-GPIO.setmode(GPIO.BOARD)
-
 class TCP_Server():
     def __init__(self):
         self.control = Control()
@@ -43,14 +41,66 @@ class TCP_Server():
                 self.t1.join()
 
 class Control():
-    def __init__(self):
-        GPIO.setup(40, GPIO.OUT)
-    
-    def on(self):
-        GPIO.output(40, GPIO.HIGH)
+    #pins
+    gpio_forward_left = 35
+    gpio_forward_right = 36
+    gpio_back_left = 37
+    gpio_back_right = 38
+    gpio_enable_left = 31
+    gpio_enable_right = 32
+    motor_left = GPIO.PWM(gpio_enable_left, 200)
+    motor_right = GPIO.PWM(gpio_enable_right, 200)
 
-    def off(self):
-        GPIO.output(38, GPIO.LOW)
+    #parameters
+    left_motor = 100
+    right_motor = 100
+    veliocity = 100
+
+    def __init__(self):
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(self.gpio_forward_left, GPIO.OUT)
+        GPIO.setup(self.gpio_forward_right, GPIO.OUT)
+        GPIO.setup(self.gpio_back_left, GPIO.OUT)
+        GPIO.setup(self.gpio_back_right, GPIO.OUT)
+        GPIO.setup(self.gpio_enable_left, GPIO.OUT)
+        GPIO.setup(self.gpio_enable_right, GPIO.OUT)
+        self.motor_left.start(100)
+        self.motor_right.start(100)
+
+    def motor_calibration(self, left_motor, right_motor):
+        self.left_motor = ((left_motor / 100) * (self.veliocity / 100) * 100)
+        self.right_motor = ((right_motor / 100) * (self.veliocity / 100) * 100)
+
+    def motor_veliocity(self, veliocity):
+        self.veliocity = veliocity
+
+    def forward(self):
+        GPIO.output(self.gpio_forward_left, GPIO.HIGH)
+        GPIO.output(self.gpio_forward_right, GPIO.HIGH)
+        GPIO.output(self.gpio_back_left, GPIO.LOW)
+        GPIO.output(self.back_right, GPIO.LOW)
+
+    def back(self):
+        GPIO.output(self.gpio_forward_left, GPIO.LOW)
+        GPIO.output(self.gpio_forward_right, GPIO.LOW)
+        GPIO.output(self.gpio_back_left, GPIO.HIGH)
+        GPIO.output(self.back_right, GPIO.HIGH)
+
+    def right(self):
+        GPIO.output(self.gpio_forward_left, GPIO.HIGH)
+        GPIO.output(self.gpio_forward_right, GPIO.LOW)
+        GPIO.output(self.gpio_back_left, GPIO.LOW)
+        GPIO.output(self.gpio_back_right, GPIO.HIGH)
+
+    def left(self):
+        GPIO.output(self.gpio_forward_left, GPIO.LOW)
+        GPIO.output(self.gpio_forward_right, GPIO.HIGH)
+        GPIO.output(self.gpio_back_left, GPIO.HIGH)
+        GPIO.output(self.gpio_back_right, GPIO.LOW)
+    
+    def set_motor_parameters(self):
+        self.motor_left.ChangeDutyCycle(self.left_motor)
+        self.motor_right.ChangeDutyCycle(self.left_right)
 
 if __name__ == "__main__":
     tcp_server = TCP_Server()
