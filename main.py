@@ -1,9 +1,9 @@
-import threading, time, socket
+import threading, time, socket, json
 import RPi.GPIO as GPIO
 
-TCP_IP = '192.168.0.106'
+TCP_IP = '192.168.0.115'
 TCP_PORT = 5005
-BUFFER_SIZE = 20
+BUFFER_SIZE = 1024
 
 class TCP_Server():
     def __init__(self):
@@ -32,8 +32,8 @@ class TCP_Server():
                     #elif json_data['command'] == 0x0a: 
                 conn.send(data)
                 conn.close()
-            except:
-                pass
+            except Exception as e:
+                print e
 
     def start(self):
         self.run_event = threading.Event()
@@ -49,15 +49,14 @@ class TCP_Server():
                 self.t1.join()
 
 class Control():
-    #pins
+    #pin
+    GPIO.setmode(GPIO.BOARD)
     gpio_forward_left = 35
     gpio_forward_right = 36
     gpio_back_left = 37
     gpio_back_right = 38
     gpio_enable_left = 31
     gpio_enable_right = 32
-    motor_left = GPIO.PWM(gpio_enable_left, 200)
-    motor_right = GPIO.PWM(gpio_enable_right, 200)
 
     #parameters
     left_motor = 100
@@ -72,6 +71,8 @@ class Control():
         GPIO.setup(self.gpio_back_right, GPIO.OUT)
         GPIO.setup(self.gpio_enable_left, GPIO.OUT)
         GPIO.setup(self.gpio_enable_right, GPIO.OUT)
+	self.motor_left = GPIO.PWM(self.gpio_enable_left, 200)
+    	self.motor_right = GPIO.PWM(self.gpio_enable_right, 200)
         self.motor_left.start(100)
         self.motor_right.start(100)
 
