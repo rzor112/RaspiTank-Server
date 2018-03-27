@@ -15,12 +15,12 @@ class TCP_Server():
 
     def tcp_server(self):
          while self.run_event.is_set():
-             try:
-                 self.s.settimeout(5)
-                 conn, addr = self.s.accept()
-                 data = conn.recv(BUFFER_SIZE)
-                 if not data: break
-                 else:
+            try:
+                self.s.settimeout(5)
+                conn, addr = self.s.accept()
+                data = conn.recv(BUFFER_SIZE)
+                if not data: break
+                else:
                     json_data = json.loads(data)
                     if json_data['command'] == 0x00: self.control.stop()
                     elif json_data['command'] == 0x01: self.control.forward()
@@ -30,8 +30,8 @@ class TCP_Server():
                     elif json_data['command'] == 0x05: self.control.motor_veliocity(json_data['value'])
                     elif json_data['command'] == 0x06: self.control.motor_calibration(json_data['value'][0], json_data['value'][1])
                     #elif json_data['command'] == 0x0a: 
-                 conn.send(data)
-                 conn.close()
+                conn.send(data)
+                conn.close()
             except:
                 pass
 
