@@ -13,82 +13,123 @@ class TCP_Server():
         self.s.bind((TCP_IP, TCP_PORT))
         self.s.listen(1)
 
+    def open_cv(self):
+        while self.run_event.is_set() and self.control.auto_mode:
+            print 'open_cv'
+
     def tcp_server(self):
          while self.run_event.is_set():
             try:
                 self.s.settimeout(2)
                 conn, addr = self.s.accept()
                 while self.run_event.is_set():
-					data = conn.recv(BUFFER_SIZE)
-					if not data: break
-					else:
-						try:
-							print data
-							json_data = json.loads(data)
-							#------------------------------------------------------- Set Commands
-							if json_data['command'] == 0x00:	#stop
-								self.control.stop()
-								conn.send(self.json_builder(True, 0x00, 0))
-								
-							elif json_data['command'] == 0x01:	#forward
-								self.control.forward()
-								conn.send(self.json_builder(True, 0x01, 0))
-								
-							elif json_data['command'] == 0x02:	#back
-								self.control.back()
-								conn.send(self.json_builder(True, 0x02, 0))
-								
-							elif json_data['command'] == 0x03:	#left
-								self.control.left()
-								conn.send(self.json_builder(True, 0x03, 0))
-								
-							elif json_data['command'] == 0x04:	#right
-								self.control.right()
-								conn.send(self.json_builder(True, 0x04, 0))
-								
-							elif json_data['command'] == 0x05:	#set veliocity
-								self.control.motor_veliocity(json_data['value'])
-								conn.send(self.json_builder(True, 0x05, 0))
-								
-							elif json_data['command'] == 0x06:	#set calibration motor left
-								self.control.motor_calibration_left(json_data['value'])
-								conn.send(self.json_builder(True, 0x06, 0))
-								
-							elif json_data['command'] == 0x07:	#set calibration motor right
-								self.control.motor_calibration_right(json_data['value'])
-								conn.send(self.json_builder(True, 0x07, 0))
-								
-							#------------------------------------------------------- Read Commands
-							
-							elif json_data['command'] == 0xa0:	#read veliocity
-								conn.send(self.json_builder(True, 0xa0, self.control.veliocity))
-							
-							elif json_data['command'] == 0xa1:	#read calibration motor left
-								conn.send(self.json_builder(True, 0xa1, self.control.left_motor_calibration))
-								
-							elif json_data['command'] == 0xa2:	#read calibration motor right
-								conn.send(self.json_builder(True, 0xa2, self.control.right_motor_calibration))
-							
-							elif json_data['command'] == 0xff:  #ping
-								conn.send(self.json_builder(True, 0xff, 0))
-								
-						except Exception as e:
-							print e
+                    data = conn.recv(BUFFER_SIZE)
+                    if not data: break
+                    else:
+                        try:
+                            print data
+                            json_data = json.loads(data)
+                            #------------------------------------------------------- Set Commands
+                            if json_data['command'] == 0x00:    #stop
+                                if not self.control.auto_mode:
+                                    self.control.stop()
+                                    conn.send(self.json_builder(True, 0x00, 0))
+                                else:
+                                    conn.send(self.json_builder(False, 0x00, 0))
+                                
+                            elif json_data['command'] == 0x01:    #forward
+                                if not self.control.auto_mode:
+                                    self.control.forward()
+                                    conn.send(self.json_builder(True, 0x01, 0))
+                                else:
+                                    conn.send(self.json_builder(False, 0x01, 0))
+                                
+                            elif json_data['command'] == 0x02:    #back
+                                if not self.control.auto_mode:
+                                    self.control.back()
+                                    conn.send(self.json_builder(True, 0x02, 0))
+                                else:
+                                    conn.send(self.json_builder(False, 0x02, 0))
+                                
+                            elif json_data['command'] == 0x03:    #left
+                                if not self.control.auto_mode:
+                                    self.control.left()
+                                    conn.send(self.json_builder(True, 0x03, 0))
+                                else:
+                                    conn.send(self.json_builder(False, 0x03, 0))
+                                
+                            elif json_data['command'] == 0x04:    #right
+                                if not self.control.auto_mode:
+                                    self.control.right()
+                                    conn.send(self.json_builder(True, 0x04, 0))
+                                else:
+                                    conn.send(self.json_builder(False, 0x04, 0))
+                                
+                            elif json_data['command'] == 0x05:    #set veliocity
+                                if not self.control.auto_mode:
+                                    self.control.motor_veliocity(json_data['value'])
+                                    conn.send(self.json_builder(True, 0x05, 0))
+                                else:
+                                    conn.send(self.json_builder(False, 0x05, 0))
+                                
+                            elif json_data['command'] == 0x06:    #set calibration motor left
+                                if not self.control.auto_mode:
+                                    self.control.motor_calibration_left(json_data['value'])
+                                    conn.send(self.json_builder(True, 0x06, 0))
+                                else:
+                                    conn.send(self.json_builder(False, 0x06, 0))
+                                
+                            elif json_data['command'] == 0x07:    #set calibration motor right
+                                if not self.control.auto_mode:
+                                    self.control.motor_calibration_right(json_data['value'])
+                                    conn.send(self.json_builder(True, 0x07, 0))
+                                else:
+                                    conn.send(self.json_builder(False, 0x07, 0))
+
+                            elif json_data['command'] == 0x08:  #set auto_mode true
+                                self.control.auto_mode = True
+                                conn.send(self.json_builder(True, 0x08, 0))
+
+                            elif json_data['command'] == 0x09:  #set auto_mode false
+                                self.control.auto_mode = False
+                                conn.send(self.json_builder(True, 0x09, 0))
+                                
+                            #------------------------------------------------------- Read Commands
+                            
+                            elif json_data['command'] == 0xa0:    #read veliocity
+                                conn.send(self.json_builder(True, 0xa0, self.control.veliocity))
+                            
+                            elif json_data['command'] == 0xa1:    #read calibration motor left
+                                conn.send(self.json_builder(True, 0xa1, self.control.left_motor_calibration))
+                                
+                            elif json_data['command'] == 0xa2:    #read calibration motor right
+                                conn.send(self.json_builder(True, 0xa2, self.control.right_motor_calibration))
+                            
+                            elif json_data['command'] == 0xa3:    #read auto_mode
+                                 conn.send(self.json_builder(True, 0xa3, self.control.auto_mode))   
+
+                            elif json_data['command'] == 0xff:  #ping
+                                conn.send(self.json_builder(True, 0xff, 0))
+                                
+                        except Exception as e:
+                            print e
                 conn.close()
                 self.control.stop()
             except Exception as e:
                 pass
-				
+                
     def json_builder(self, status, command, value):
-		json_data = {'ResponseStatus': status, 'data': {'command': command, 'value': value}}
-		json_data = json.dumps(json_data)
-		return str(json_data)
-				
+        json_data = {'ResponseStatus': status, 'data': {'command': command, 'value': value}}
+        json_data = json.dumps(json_data)
+        return str(json_data)
+                
     def start(self):
         self.run_event = threading.Event()
         self.run_event.set()
         self.t1 = threading.Thread(target = self.tcp_server)
+        self.t2 = threading.Thread(target = self.open_cv)
         self.t1.start()
+        self.t2.start()
 
         try:
             while True:
@@ -111,8 +152,9 @@ class Control():
     left_motor_calibration = 100
     right_motor_calibration = 100
     veliocity = 100
-	
-	#definitions
+    
+    #definitions
+    auto_mode = False
 
     def __init__(self):
         GPIO.setmode(GPIO.BOARD)
@@ -123,14 +165,14 @@ class Control():
         GPIO.setup(self.gpio_enable_left, GPIO.OUT)
         GPIO.setup(self.gpio_enable_right, GPIO.OUT)
         self.motor_left = GPIO.PWM(self.gpio_enable_left, 200)
-    	self.motor_right = GPIO.PWM(self.gpio_enable_right, 200)
+        self.motor_right = GPIO.PWM(self.gpio_enable_right, 200)
         self.motor_left.start(100)
         self.motor_right.start(100)
 
     def motor_calibration_right(self, multipler):
         self.right_motor_calibration = int(multipler)
         self.set_motor_parameters()
-		
+        
     def motor_calibration_left(self, multipler):
         self.left_motor_calibration = int(multipler)
         self.set_motor_parameters()
