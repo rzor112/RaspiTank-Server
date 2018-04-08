@@ -22,6 +22,12 @@
     <Compile Include="main.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="markers_module.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="open_cv_module.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>
