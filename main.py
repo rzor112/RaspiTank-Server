@@ -12,7 +12,6 @@ BUFFER_SIZE = 1024
 camera_address = 'http://192.168.0.114:8081/'
 
 def order_points(points):
- 
     s = points.sum(axis=1)
     diff = np.diff(points, axis=1)
      
@@ -83,9 +82,42 @@ class TCP_Server():
                                         point[0] = point[0] - min_x
                                         point[1] = point[1] - min_y
                                     (max_width,max_height) = max_width_height(dst)
-                                    print 'x: ' + str(min_x + max_width)
-                                    self.control.forward()
+                                    
+                                    #engine controlling
+                                    
+                                    x_position = ((min_x + max_width)-70)-120
+                                    print x_position
 
+                                    if -50 < x_position <= 0:
+                                        self.control.forward()
+                                        self.control.motor_calibration_right(100)
+                                        self.control.motor_calibration_left(100 - (x_position * -1))
+
+                                    elif 0 < x_position < 50:
+                                        self.control.forward()
+                                        self.control.motor_calibration_left(100)
+                                        self.control.motor_calibration_right(100 - x_position)
+
+                                    elif -84 < x_position <= -50:
+                                        self.control.forward()
+                                        self.control.motor_calibration_right(100)
+                                        self.control.motor_calibration_left(0)
+
+                                    elif 50 <= x_position < 84:
+                                        self.control.forward()
+                                        self.control.motor_calibration_left(100)
+                                        self.control.motor_calibration_right(0)
+
+                                    elif x_position <= -84:
+                                        self.control.left()
+                                        self.control.motor_calibration_left(100)
+                                        self.control.motor_calibration_right(100)
+
+                                    elif 84 <= x_position:
+                                        self.control.right()
+                                        self.control.motor_calibration_left(100)
+                                        self.control.motor_calibration_right(100)
+                                    
                         if cv2.waitKey(1) ==27:
                             exit(0)
                 except Exception as e:
@@ -275,18 +307,24 @@ class Control():
         GPIO.output(self.gpio_forward_right, GPIO.LOW)
         GPIO.output(self.gpio_back_left, GPIO.HIGH)
         GPIO.output(self.gpio_back_right, GPIO.HIGH)
+        if self.auto_mode:
+            self.timeout = 10
 
     def right(self):
         GPIO.output(self.gpio_forward_left, GPIO.HIGH)
         GPIO.output(self.gpio_forward_right, GPIO.LOW)
         GPIO.output(self.gpio_back_left, GPIO.LOW)
         GPIO.output(self.gpio_back_right, GPIO.HIGH)
+        if self.auto_mode:
+            self.timeout = 10
 
     def left(self):
         GPIO.output(self.gpio_forward_left, GPIO.LOW)
         GPIO.output(self.gpio_forward_right, GPIO.HIGH)
         GPIO.output(self.gpio_back_left, GPIO.HIGH)
         GPIO.output(self.gpio_back_right, GPIO.LOW)
+        if self.auto_mode:
+            self.timeout = 10
 
     def stop(self):
         GPIO.output(self.gpio_forward_left, GPIO.LOW)
