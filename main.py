@@ -40,8 +40,10 @@ def max_width_height(points):
 
 class TCP_Server():
     def __init__(self):
-        
         self.control = Control()
+        self.manual_left_motor_calibration = self.control.left_motor_calibration
+        self.manual_right_motor_calibration = self.control.right_motor_calibration
+        self.manual_velocity = self.control.veliocity
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.bind((TCP_IP, TCP_PORT))
@@ -86,7 +88,6 @@ class TCP_Server():
                                     #engine controlling
                                     
                                     x_position = ((min_x + max_width)-70)-120
-                                    print x_position
 
                                     if -50 < x_position <= 0:
                                         self.control.forward()
@@ -196,11 +197,20 @@ class TCP_Server():
 
                             elif json_data['command'] == 0x08:  #set auto_mode true
                                 self.stream = urllib2.urlopen(camera_address, timeout = 2)
+                                self.manual_left_motor_calibration = self.control.left_motor_calibration
+                                self.manual_right_motor_calibration = self.control.right_motor_calibration
+                                self.manual_velocity = self.control.veliocity
+                                self.control.left_motor_calibration = 100
+                                self.control.right_motor_calibration = 100
+                                self.control.veliocity = 100
                                 self.control.auto_mode = True
                                 conn.send(self.json_builder(True, 0x08, 0))
 
                             elif json_data['command'] == 0x09:  #set auto_mode false
                                 self.control.auto_mode = False
+                                self.control.left_motor_calibration = self.manual_left_motor_calibration
+                                self.control.right_motor_calibration = self.manual_right_motor_calibration
+                                self.control.veliocity = self.manual_velocity
                                 conn.send(self.json_builder(True, 0x09, 0))
                                 
                             #------------------------------------------------------- Read Commands
