@@ -6,10 +6,10 @@ import urllib2
 from markers_module import *
 from open_cv_module import *
 
-TCP_IP = '192.168.0.114'
+TCP_IP = '192.168.0.107'
 TCP_PORT = 5005
 BUFFER_SIZE = 1024
-camera_address = 'http://192.168.0.114:8081/'
+camera_address = 'http://127.0.0.1:8081/'
 
 def order_points(points):
     s = points.sum(axis=1)
@@ -47,7 +47,7 @@ class TCP_Server():
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.s.bind((TCP_IP, TCP_PORT))
-        self.s.listen(1)
+        self.s.listen(0)
 
     def open_cv(self):
         bytes = ''
@@ -91,33 +91,33 @@ class TCP_Server():
 
                                     if -50 < x_position <= 0:
                                         self.control.forward()
-                                        self.control.motor_calibration_right(100)
-                                        self.control.motor_calibration_left(100 - (x_position * -1))
+                                        self.control.motor_calibration_right(100 - (x_position * -1))
+                                        self.control.motor_calibration_left(100)
 
                                     elif 0 < x_position < 50:
                                         self.control.forward()
-                                        self.control.motor_calibration_left(100)
-                                        self.control.motor_calibration_right(100 - x_position)
+                                        self.control.motor_calibration_left(100 - x_position)
+                                        self.control.motor_calibration_right(100)
 
                                     elif -84 < x_position <= -50:
                                         self.control.forward()
-                                        self.control.motor_calibration_right(100)
-                                        self.control.motor_calibration_left(0)
+                                        self.control.motor_calibration_right(0)
+                                        self.control.motor_calibration_left(100)
 
                                     elif 50 <= x_position < 84:
                                         self.control.forward()
-                                        self.control.motor_calibration_left(100)
-                                        self.control.motor_calibration_right(0)
+                                        self.control.motor_calibration_left(0)
+                                        self.control.motor_calibration_right(100)
 
                                     elif x_position <= -84:
                                         self.control.left()
-                                        self.control.motor_calibration_left(100)
-                                        self.control.motor_calibration_right(100)
+                                        self.control.motor_calibration_left(60)
+                                        self.control.motor_calibration_right(30)
 
                                     elif 84 <= x_position:
                                         self.control.right()
-                                        self.control.motor_calibration_left(100)
-                                        self.control.motor_calibration_right(100)
+                                        self.control.motor_calibration_left(30)
+                                        self.control.motor_calibration_right(60)
                                     
                         if cv2.waitKey(1) ==27:
                             exit(0)
@@ -129,8 +129,10 @@ class TCP_Server():
     def tcp_server(self):
          while self.run_event.is_set():
             try:
+		self.control.connected = False
                 self.s.settimeout(2)
                 conn, addr = self.s.accept()
+                self.control.connected = True
                 while self.run_event.is_set():
                     data = conn.recv(BUFFER_SIZE)
                     if not data: break
@@ -233,6 +235,7 @@ class TCP_Server():
                         except Exception as e:
                             print e
                 conn.close()
+                self.control.connected = False
                 self.control.stop()
             except Exception as e:
                 pass
@@ -270,6 +273,16 @@ class Control():
     gpio_enable_left = 11
     gpio_enable_right = 12
 
+    #leds
+    forward_r = 29
+    forward_g = 31
+    forward_b = 33
+    forward_c = 38
+    back_r = 35
+    back_g = 37
+    back_b = 36
+    back_c = 40
+
     #parameters
     left_motor_calibration = 100
     right_motor_calibration = 100
@@ -278,19 +291,42 @@ class Control():
     #definitions
     auto_mode = False
     timeout = 0
+    connected = False
 
     def __init__(self):
         GPIO.setmode(GPIO.BOARD)
+        GPIO.setwarnings(False)
         GPIO.setup(self.gpio_forward_left, GPIO.OUT)
         GPIO.setup(self.gpio_forward_right, GPIO.OUT)
         GPIO.setup(self.gpio_back_left, GPIO.OUT)
         GPIO.setup(self.gpio_back_right, GPIO.OUT)
         GPIO.setup(self.gpio_enable_left, GPIO.OUT)
         GPIO.setup(self.gpio_enable_right, GPIO.OUT)
+        GPIO.setup(self.forward_r, GPIO.OUT)
+        GPIO.setup(self.forward_g, GPIO.OUT)
+        GPIO.setup(self.forward_b, GPIO.OUT)
+        GPIO.setup(self.forward_c, GPIO.OUT)
+        GPIO.setup(self.back_r, GPIO.OUT)
+        GPIO.setup(self.back_g, GPIO.OUT)
+        GPIO.setup(self.back_b, GPIO.OUT)
+        GPIO.setup(self.back_c, GPIO.OUT)
+        self.led_forward = GPIO.PWM(self.forward_c, 200)
+        self.led_back = GPIO.PWM(self.back_c, 200)
         self.motor_left = GPIO.PWM(self.gpio_enable_left, 200)
         self.motor_right = GPIO.PWM(self.gpio_enable_right, 200)
         self.motor_left.start(100)
         self.motor_right.start(100)
+        self.led_forward.start(100)
+        self.led_back.start(100)
+
+        GPIO.output(self.forward_r, GPIO.HIGH)
+        GPIO.output(self.forward_g, GPIO.HIGH)
+        GPIO.output(self.forward_b, GPIO.HIGH)
+        GPIO.output(self.forward_c, GPIO.LOW)
+        GPIO.output(self.back_r, GPIO.HIGH)
+        GPIO.output(self.back_g, GPIO.HIGH)
+        GPIO.output(self.back_b, GPIO.HIGH)
+        GPIO.output(self.back_c, GPIO.HIGH)
 
     def motor_calibration_right(self, multipler):
         self.right_motor_calibration = int(multipler)
@@ -305,20 +341,22 @@ class Control():
         self.set_motor_parameters()
 
     def forward(self):
+        self.led_forward_set()
         GPIO.output(self.gpio_forward_left, GPIO.HIGH)
         GPIO.output(self.gpio_forward_right, GPIO.HIGH)
         GPIO.output(self.gpio_back_left, GPIO.LOW)
         GPIO.output(self.gpio_back_right, GPIO.LOW)
         if self.auto_mode:
-            self.timeout = 10
+            self.timeout = 3
 
     def back(self):
+        self.led_back_set()
         GPIO.output(self.gpio_forward_left, GPIO.LOW)
         GPIO.output(self.gpio_forward_right, GPIO.LOW)
         GPIO.output(self.gpio_back_left, GPIO.HIGH)
         GPIO.output(self.gpio_back_right, GPIO.HIGH)
         if self.auto_mode:
-            self.timeout = 10
+            self.timeout = 3
 
     def right(self):
         GPIO.output(self.gpio_forward_left, GPIO.HIGH)
@@ -326,7 +364,7 @@ class Control():
         GPIO.output(self.gpio_back_left, GPIO.LOW)
         GPIO.output(self.gpio_back_right, GPIO.HIGH)
         if self.auto_mode:
-            self.timeout = 10
+            self.timeout = 1
 
     def left(self):
         GPIO.output(self.gpio_forward_left, GPIO.LOW)
@@ -334,7 +372,7 @@ class Control():
         GPIO.output(self.gpio_back_left, GPIO.HIGH)
         GPIO.output(self.gpio_back_right, GPIO.LOW)
         if self.auto_mode:
-            self.timeout = 10
+            self.timeout = 1
 
     def stop(self):
         GPIO.output(self.gpio_forward_left, GPIO.LOW)
@@ -346,11 +384,54 @@ class Control():
         self.motor_left.ChangeDutyCycle(((self.veliocity / 100.0) * (self.left_motor_calibration / 100.0)) * 100.0)
         self.motor_right.ChangeDutyCycle(((self.veliocity / 100.0) * (self.right_motor_calibration / 100.0)) * 100.0)
 
+    def led_forward_set(self):
+        GPIO.output(self.forward_r, GPIO.LOW)
+        GPIO.output(self.forward_g, GPIO.LOW)
+        GPIO.output(self.forward_b, GPIO.LOW)
+        self.led_forward.ChangeDutyCycle(100)
+        GPIO.output(self.back_r, GPIO.LOW)
+        GPIO.output(self.back_g, GPIO.HIGH)
+        GPIO.output(self.back_b, GPIO.HIGH)
+        self.led_back.ChangeDutyCycle(100)
+
+    def led_back_set(self):
+        GPIO.output(self.forward_r, GPIO.LOW)
+        GPIO.output(self.forward_g, GPIO.HIGH)
+        GPIO.output(self.forward_b, GPIO.HIGH)
+        self.led_forward.ChangeDutyCycle(100)
+        GPIO.output(self.back_r, GPIO.LOW)
+        GPIO.output(self.back_g, GPIO.LOW)
+        GPIO.output(self.back_b, GPIO.LOW)
+        self.led_back.ChangeDutyCycle(100)
+
     def thread_start(self):
         self.run_event = threading.Event()
         self.run_event.set()
         self.t1 = threading.Thread(target = self.timeout_stop)
         self.t1.start()
+        self.t2 = threading.Thread(target = self.led_thread)
+        self.t2.start()
+
+    def led_thread(self):
+        while self.run_event.is_set():
+            if self.connected == False:
+                GPIO.output(self.forward_r, GPIO.LOW)
+                GPIO.output(self.forward_g, GPIO.LOW)
+                GPIO.output(self.forward_b, GPIO.LOW)
+                GPIO.output(self.back_r, GPIO.LOW)
+                GPIO.output(self.back_g, GPIO.LOW)
+                GPIO.output(self.back_b, GPIO.LOW)
+                for x in range(100):
+                     self.led_back.ChangeDutyCycle(x)
+                     self.led_forward.ChangeDutyCycle(x)
+                     time.sleep(0.005)
+                for x in range(100):
+                     self.led_back.ChangeDutyCycle(100-x)
+                     self.led_forward.ChangeDutyCycle(100-x)
+                     time.sleep(0.005)
+		self.led_forward_set()
+            else:
+                time.sleep(0.1)
 
     def timeout_stop(self):
         while self.run_event.is_set():
